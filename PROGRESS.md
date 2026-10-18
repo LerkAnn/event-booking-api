@@ -16,25 +16,25 @@
 - Cut first if behind: CI, deploy, Hangfire, LeetCode
 - If early: add a stretch task inside the current week, don't jump ahead
 - Resign only after the bonus is paid in Feb (2-month notice)
+- Sessions: 3x40 min weekdays + 1x90 min weekend; 15 min minimum on bad days
 
 ## Done
 
 - Week 0: GitHub, .NET 9, Docker, SSMS set up. Repo created and pushed.
 - Week 1, Session 1: SQL Server 2025 running in Docker (container sql1), connected from SSMS, created EventBooking database, created Events table.
 - Week 1, Session 2: designed schema; created all 7 tables (Events, Roles, Users, SeatStatuses, BookingStatuses, Seats, Bookings) with foreign keys.
-- Week 1, Session 3: schema.sql and seed.sql in repo, sample data loaded (2 events, 1 user, 5 seats, 1 booking), first JOIN query showing event name and seat status.
+- Week 1, Session 3: schema.sql and seed.sql in repo, sample data loaded (2 events, 1 user, 5 seats, 1 booking), first JOIN query.
+- Week 1, Session 4: wrote a 5-table JOIN myself (booking + user + seat + event + status) and got the expected row. Quiz: primary key, PK vs UNIQUE, composite key.
 
 ## Current
 
-- Week 1: SQL basics + booking schema + SQL Server in Docker (weekend session left)
+- Week 1 mostly done. Leftovers: blank-file challenge (Events + Seats from memory) and SQLBolt lessons 1-6
 
 ## Next
 
-- Week 1, Session 4 (weekend, 90 min):
-    1. Blank-file challenge: write Events + Seats tables from memory, then compare with schema.sql
-    2. Write a JOIN yourself: each booking with user name, event name, seat
-    3. SQLBolt lessons 1-6 (cut first if tired)
-    4. Interview quiz from the list below
+- Week 2, Session 1: start with the leftover blank-file challenge (30 min) in a scratch database, or SQLBolt lessons 1-6 if tired
+- Then Week 2 topics: GROUP BY, indexes, transactions, constraints
+- Finish the JOIN query with b.booking_id in the SELECT list
 - Make sure schema.sql and seed.sql are committed and pushed (check with git status)
 - Optional: save the SA password outside the repo
 
@@ -72,14 +72,16 @@
 - PowerShell vs Linux command syntax (no backslash line breaks)
 - FOREIGN KEY needs the column declared first
 - Missing commas in CREATE TABLE
-- JOIN syntax (just started)
+- JOIN syntax (got one working; keep practising, especially the SELECT list with aliases)
 - Variables only live within one batch; GO ends the batch
 
 ## Interview questions I couldn't answer
 
 - What is Docker, and how is a container different from a VM? (to answer)
 - What does -p 1433:1433 mean? (answered: host port : container port)
-- What is a primary key, and what does IDENTITY do? (partly: IDENTITY gives unique auto numbers; need: primary key uniquely identifies each row, no nulls)
+- What is a primary key? (answered: uniquely identifies each row, no duplicates, no NULLs, referenced by foreign keys; one per table, can be composite)
+- Primary key vs UNIQUE constraint? (answered: one PK per table, many UNIQUEs allowed; PK can't be NULL, UNIQUE allows one NULL in SQL Server)
+- What is a composite key? (answered: PK or UNIQUE across 2+ columns; the combination must be unique)
 - IDENTITY vs GUID as primary key (partly; IDENTITY small, ordered, fast, guessable; GUID big, hard to guess, random GUIDs fragment the index)
 - IDENTITY vs AUTO_INCREMENT (answered: same idea, different syntax)
 - What is T-SQL? (answered: Microsoft's SQL dialect with variables, IF/WHILE, TRY...CATCH, TOP, stored procedures)
