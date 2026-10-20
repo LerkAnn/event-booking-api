@@ -1,7 +1,6 @@
 # PROGRESS.md
 
 ## Plan (10 weeks, Week 1 = 12 Oct)
-
 - W1: SQL basics + booking schema + SQL Server in Docker
 - W2: Joins, GROUP BY, indexes, transactions, constraints + .NET project + EF Core
 - W3: CRUD APIs, validation, error handling, Swagger, push to GitHub
@@ -19,27 +18,25 @@
 - Sessions: 3x40 min weekdays + 1x90 min weekend; 15 min minimum on bad days
 
 ## Done
-
 - Week 0: GitHub, .NET 9, Docker, SSMS set up. Repo created and pushed.
 - Week 1, Session 1: SQL Server 2025 running in Docker (container sql1), connected from SSMS, created EventBooking database, created Events table.
 - Week 1, Session 2: designed schema; created all 7 tables (Events, Roles, Users, SeatStatuses, BookingStatuses, Seats, Bookings) with foreign keys.
 - Week 1, Session 3: schema.sql and seed.sql in repo, sample data loaded (2 events, 1 user, 5 seats, 1 booking), first JOIN query.
 - Week 1, Session 4: wrote a 5-table JOIN myself (booking + user + seat + event + status) and got the expected row. Quiz: primary key, PK vs UNIQUE, composite key.
+- Week 2, Session 1: blank-file challenge done (Events + Seats from memory in Scratch DB). Wrote GROUP BY query: seat count per status for COMIC FIESTA, with HAVING COUNT(*) > 2. Learned WHERE vs HAVING.
 
 ## Current
-
-- Week 1 mostly done. Leftovers: blank-file challenge (Events + Seats from memory) and SQLBolt lessons 1-6
+- Week 2: Joins, GROUP BY, indexes, transactions, constraints + .NET project + EF Core. GROUP BY started.
 
 ## Next
-
-- Week 2, Session 1: start with the leftover blank-file challenge (30 min) in a scratch database, or SQLBolt lessons 1-6 if tired
-- Then Week 2 topics: GROUP BY, indexes, transactions, constraints
-- Finish the JOIN query with b.booking_id in the SELECT list
+- Week 2, Session 2: indexes (what they are, create one on Seats(event_id), see why it helps) and constraints review
+- Then transactions (BEGIN TRAN / COMMIT / ROLLBACK), needed for Week 5 booking logic
+- Then create the .NET project and add EF Core (later in Week 2)
+- Leftover (cut first if tired): SQLBolt lessons 1-6
 - Make sure schema.sql and seed.sql are committed and pushed (check with git status)
 - Optional: save the SA password outside the repo
 
 ## Project state
-
 - Repo: event-booking-api, contains PROGRESS.md, schema.sql, seed.sql
 - Tools: .NET 9, Docker Desktop, SSMS; SQL Server 2025 in Docker as sql1 (port 1433, user sa)
 - Run it: open Docker Desktop, start container sql1 if stopped, connect SSMS to localhost,1433 (Trust server certificate)
@@ -49,7 +46,6 @@
 - Risk: sql1 has no volume, so deleting the container loses the tables; rebuild with CREATE DATABASE EventBooking + schema.sql + seed.sql. Fix with a volume in Docker Compose (Week 7)
 
 ## Decisions
-
 - Stack: .NET 9, SQL Server 2025 image, EF Core
 - snake_case column names, plural table names
 - IDENTITY(1,1) primary keys (not GUID)
@@ -63,20 +59,18 @@
 - SA password stored outside the repo, never committed
 
 ## Stuck on
-
 - Double-booking rule: UNIQUE on seat_id would block rebooking after cancel; decide in Week 5
 
 ## Weak spots
-
 - SQL Server vs MySQL syntax (AUTO_INCREMENT vs IDENTITY)
 - PowerShell vs Linux command syntax (no backslash line breaks)
 - FOREIGN KEY needs the column declared first
 - Missing commas in CREATE TABLE
-- JOIN syntax (got one working; keep practising, especially the SELECT list with aliases)
+- JOIN syntax (working; keep practising the SELECT list with aliases)
 - Variables only live within one batch; GO ends the batch
+- Forgetting to scope GROUP BY queries to one event (add the Events join + WHERE)
 
 ## Interview questions I couldn't answer
-
 - What is Docker, and how is a container different from a VM? (to answer)
 - What does -p 1433:1433 mean? (answered: host port : container port)
 - What is a primary key? (answered: uniquely identifies each row, no duplicates, no NULLs, referenced by foreign keys; one per table, can be composite)
@@ -90,5 +84,6 @@
 - Lookup table vs CHECK constraint for statuses? (to answer: lookup = FK-enforced, add values with INSERT, extra join; CHECK = simpler, needs schema change to add values)
 - DELETE vs TRUNCATE? (to revisit: DELETE row by row, allows WHERE, keeps IDENTITY counter; TRUNCATE empties fast, no WHERE, resets IDENTITY, fails if a FK points to the table)
 - What is GO? (to revisit: SSMS batch separator, not T-SQL; variables don't carry across batches)
-- WHERE vs HAVING? (to answer in Week 2)
+- WHERE vs HAVING? (answered: WHERE filters rows before grouping, HAVING filters groups after, so only HAVING can use COUNT(*); WHERE row_label = 'Z' is a row condition)
+- How does GROUP BY work with COUNT(*)? (answered: rows are bucketed by the group column, COUNT(*) counts rows per bucket)
 - What does git add do; staging vs committing? (to answer)
