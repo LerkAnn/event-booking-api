@@ -68,3 +68,6 @@ CREATE TABLE Bookings(
     created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 )
+
+CREATE INDEX IX_Bookings_seat_id ON Bookings (seat_id);
+REATE INDEX IX_Bookings_user_id ON Bookings (user_id);
