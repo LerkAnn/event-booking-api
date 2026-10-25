@@ -25,17 +25,18 @@
 - Week 1, Session 2: designed schema; created all 7 tables with foreign keys.
 - Week 1, Session 3: schema.sql and seed.sql in repo, sample data loaded, first JOIN query.
 - Week 1, Session 4: wrote a 5-table JOIN myself. Quiz: primary key, PK vs UNIQUE, composite key.
-- Week 2, Session 1: blank-file challenge done (Events + Seats from memory). GROUP BY query with HAVING. Learned WHERE vs HAVING.
-- Week 2, Session 2: learned indexes (scan vs seek, B-tree idea). Created IX_Bookings_seat_id and IX_Bookings_user_id, added to schema.sql, pushed. Read an execution plan (Ctrl+L).
+- Week 2, Session 1: blank-file challenge done. GROUP BY query with HAVING. Learned WHERE vs HAVING.
+- Week 2, Session 2: indexes (scan vs seek, B-tree idea). Created IX_Bookings_seat_id and IX_Bookings_user_id, added to schema.sql, pushed. Read an execution plan.
+- Week 2, Session 3: loaded 5,000 rows, saw Seek with the index and Scan after dropping it, recreated the index. Learned transactions (BEGIN TRAN / COMMIT / ROLLBACK) and ACID. Cleaned up load-test data.
 
 ## Current
 
-- Week 2: Joins, GROUP BY, indexes, transactions, constraints + .NET project + EF Core. Indexes done.
+- Week 2: Joins, GROUP BY, indexes, transactions, constraints + .NET project + EF Core. Indexes and transaction basics done.
 
 ## Next
 
-- Week 2, Session 3: ask me for the script that generates thousands of rows, then compare scan vs seek with and without the index (stretch, 15 min). Then start transactions (BEGIN TRAN / COMMIT / ROLLBACK), needed for Week 5 booking logic
-- Then constraints review, then create the .NET project and add EF Core (later in Week 2)
+- Week 2, Session 4 (weekend, 90 min): constraints review (CHECK, DEFAULT, FK delete behaviour), then TRY...CATCH with a transaction (write it yourself), then create the .NET project and add EF Core packages
+- Verify cleanup: 1 booking and 5 seats left; make sure the IX_Bookings_seat_id index exists again
 - Leftover (cut first if tired): SQLBolt lessons 1-6
 - Optional: save the SA password outside the repo
 
@@ -80,6 +81,8 @@
 - Forgetting to scope GROUP BY queries to one event (add the Events join + WHERE)
 - Putting an index on the wrong table (index goes on the table holding the column you search by)
 - Clustered vs non-clustered index (only the basic idea so far)
+- Transactions: understand BEGIN/COMMIT/ROLLBACK; TRY...CATCH pattern not written yet
+- ACID: seen Atomicity and Consistency; Isolation and Durability not yet by experience (Isolation comes in Week 5)
 
 ## Interview questions I couldn't answer
 
@@ -101,5 +104,7 @@
 - What is an index, and what is the downside of too many? (answered: sorted B-tree so lookups take a few steps instead of reading all rows; costs extra storage and slower writes)
 - Scan vs seek? (answered: scan reads everything, seek jumps via the index; tiny tables may scan because it's cheaper)
 - Clustered vs non-clustered index? (to revisit: clustered = table rows stored in key order, one per table, usually the PK; non-clustered = separate sorted list pointing to rows)
-- A 10-million-row query is slow, what do you check first? (answered: filter with WHERE, check indexes; add: look at the execution plan first for scan vs seek)
+- A 10-million-row query is slow, what do you check first? (answered: filter with WHERE, check indexes; add: look at the execution plan first)
+- What is a transaction? (answered: several changes succeed or fail together; BEGIN TRAN, COMMIT makes permanent, ROLLBACK undoes)
+- What does ACID stand for? (partly: Atomicity all-or-nothing, Consistency rules always hold, Isolation concurrent transactions don't see each other's half-done work, Durability committed data survives a crash; only A and C seen so far)
 - What does git add do; staging vs committing? (to answer)
