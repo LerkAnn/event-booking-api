@@ -1,7 +1,6 @@
 # PROGRESS.md
 
 ## Plan (10 weeks, Week 1 = 12 Oct)
-
 - W1: SQL basics + booking schema + SQL Server in Docker
 - W2: Joins, GROUP BY, indexes, transactions, constraints + .NET project + EF Core
 - W3: CRUD APIs, validation, error handling, Swagger, push to GitHub
@@ -19,7 +18,6 @@
 - Sessions: 3x40 min weekdays + 1x90 min weekend; 15 min minimum on bad days
 
 ## Done
-
 - Week 0: GitHub, .NET 9, Docker, SSMS set up. Repo created and pushed.
 - Week 1, Session 1: SQL Server 2025 running in Docker (container sql1), connected from SSMS, created EventBooking database, created Events table.
 - Week 1, Session 2: designed schema; created all 7 tables with foreign keys.
@@ -27,32 +25,34 @@
 - Week 1, Session 4: wrote a 5-table JOIN myself. Quiz: primary key, PK vs UNIQUE, composite key.
 - Week 2, Session 1: blank-file challenge done. GROUP BY query with HAVING. Learned WHERE vs HAVING.
 - Week 2, Session 2: indexes (scan vs seek, B-tree idea). Created IX_Bookings_seat_id and IX_Bookings_user_id, added to schema.sql, pushed. Read an execution plan.
-- Week 2, Session 3: loaded 5,000 rows, saw Seek with the index and Scan after dropping it, recreated the index. Learned transactions (BEGIN TRAN / COMMIT / ROLLBACK) and ACID. Cleaned up load-test data.
+- Week 2, Session 3: loaded 5,000 rows, saw Seek with index and Scan without, recreated the index. Learned BEGIN TRAN / COMMIT / ROLLBACK and ACID. Cleaned up load-test data.
+- Week 2, Session 4: received the TRY...CATCH transaction template (book seat Z11) and a CHECK constraint on Events.total_seats. Understood the idea (TRAN = draft, TRY...CATCH = alarm that triggers cleanup); still need to run both and write them myself.
 
 ## Current
-
-- Week 2: Joins, GROUP BY, indexes, transactions, constraints + .NET project + EF Core. Indexes and transaction basics done.
+- Week 2: Joins, GROUP BY, indexes, transactions, constraints + .NET project + EF Core. Transaction concepts understood; TRY...CATCH and CHECK still to run and practise.
 
 ## Next
-
-- Week 2, Session 4 (weekend, 90 min): constraints review (CHECK, DEFAULT, FK delete behaviour), then TRY...CATCH with a transaction (write it yourself), then create the .NET project and add EF Core packages
-- Verify cleanup: 1 booking and 5 seats left; make sure the IX_Bookings_seat_id index exists again
+- Week 2, Session 5 (15-40 min): run the Part 1 TRY...CATCH script (book Z11 for Zorus), then check Z11 is BOOKED with SELECT seat_number, seat_status_id FROM Seats WHERE row_label = 'Z'
+- Break test: change @user_id to 999 and use seat 12, read the error from CATCH, confirm Z12 stays AVAILABLE
+- Run the CHECK constraint ALTER TABLE, then the failing INSERT (total_seats = 0); add the ALTER line to schema.sql
+- Then: create the .NET project (dotnet new webapi -n EventBooking.Api, dotnet run, open Swagger), add EF Core packages after
+- Blank-file challenge later: write the TRY...CATCH template from memory (aim: by Week 5)
 - Leftover (cut first if tired): SQLBolt lessons 1-6
 - Optional: save the SA password outside the repo
+- Verify earlier cleanup: 1 booking and 5 seats before running Part 1
 
 ## Project state
-
-- Repo: event-booking-api, contains PROGRESS.md, schema.sql (with 2 indexes at the bottom), seed.sql
+- Repo: event-booking-api, contains PROGRESS.md, schema.sql (2 indexes at the bottom), seed.sql
 - Tools: .NET 9, Docker Desktop, SSMS; SQL Server 2025 in Docker as sql1 (port 1433, user sa)
 - Run it: open Docker Desktop, start container sql1 if stopped, connect SSMS to localhost,1433 (Trust server certificate)
 - Main tables: Events, Roles, Users, SeatStatuses, BookingStatuses, Seats, Bookings
 - Indexes: IX_Bookings_seat_id, IX_Bookings_user_id (plus automatic ones for PKs and UNIQUEs)
 - Seeded lookups: Roles (CUSTOMER, ADMIN), SeatStatuses (AVAILABLE, HELD, BOOKED), BookingStatuses (PENDING_PAYMENT, CONFIRMED, CANCELLED, EXPIRED)
 - Sample data: seed.sql (deletes Bookings, Seats, Users, Events, then reinserts; never run on real data)
+- No .NET project yet
 - Risk: sql1 has no volume, so deleting the container loses the tables; rebuild with CREATE DATABASE EventBooking + schema.sql + seed.sql. Fix with a volume in Docker Compose (Week 7)
 
 ## Decisions
-
 - Stack: .NET 9, SQL Server 2025 image, EF Core
 - snake_case column names, plural table names
 - IDENTITY(1,1) primary keys (not GUID)
@@ -62,30 +62,31 @@
 - created_at/updated_at default to SYSUTCDATETIME(); updated_at must be set by app code on update
 - Bookings has no event_id (seat already knows its event)
 - Seats unique on (event_id, row_label, seat_number); its index already covers event_id lookups
-- Index naming: IX_Table_column; index foreign keys that are searched often (SQL Server doesn't do it automatically)
+- Index naming: IX_Table_column; index foreign keys that are searched often
 - Seed script looks up IDs by code/name, not hard-coded IDs
+- Transaction pattern: BEGIN TRY / BEGIN TRAN / changes / COMMIT / END TRY / BEGIN CATCH / IF @@TRANCOUNT > 0 ROLLBACK / END CATCH
 - SA password stored outside the repo, never committed
 
 ## Stuck on
-
 - Double-booking rule: UNIQUE on seat_id would block rebooking after cancel; decide in Week 5
+- TRAN vs TRY...CATCH felt confusing (now explained: TRAN groups changes, TRY...CATCH detects failure and triggers ROLLBACK)
+- Feel I can't write the TRY...CATCH myself yet (normal; use the template, change the middle)
 
 ## Weak spots
-
 - SQL Server vs MySQL syntax (AUTO_INCREMENT vs IDENTITY)
 - PowerShell vs Linux command syntax (no backslash line breaks)
 - FOREIGN KEY needs the column declared first
 - Missing commas in CREATE TABLE
 - JOIN syntax (working; keep practising the SELECT list with aliases)
 - Variables only live within one batch; GO ends the batch
-- Forgetting to scope GROUP BY queries to one event (add the Events join + WHERE)
-- Putting an index on the wrong table (index goes on the table holding the column you search by)
-- Clustered vs non-clustered index (only the basic idea so far)
-- Transactions: understand BEGIN/COMMIT/ROLLBACK; TRY...CATCH pattern not written yet
-- ACID: seen Atomicity and Consistency; Isolation and Durability not yet by experience (Isolation comes in Week 5)
+- Forgetting to scope GROUP BY queries to one event
+- Putting an index on the wrong table
+- Clustered vs non-clustered index (basic idea only)
+- TRY...CATCH + transaction: understand the flow, can't write it from scratch yet
+- ACID: seen Atomicity and Consistency; Isolation (Week 5) and Durability not yet by experience
+- Tired = lower understanding: on tired days do 15-min tasks, not new concepts
 
 ## Interview questions I couldn't answer
-
 - What is Docker, and how is a container different from a VM? (to answer)
 - What does -p 1433:1433 mean? (answered: host port : container port)
 - What is a primary key? (answered: uniquely identifies each row, no duplicates, no NULLs, referenced by foreign keys; one per table, can be composite)
@@ -99,12 +100,14 @@
 - Lookup table vs CHECK constraint for statuses? (to answer: lookup = FK-enforced, add values with INSERT, extra join; CHECK = simpler, needs schema change to add values)
 - DELETE vs TRUNCATE? (to revisit: DELETE row by row, allows WHERE, keeps IDENTITY counter; TRUNCATE empties fast, no WHERE, resets IDENTITY, fails if a FK points to the table)
 - What is GO? (to revisit: SSMS batch separator, not T-SQL; variables don't carry across batches)
-- WHERE vs HAVING? (answered: WHERE filters rows before grouping, HAVING filters groups after; only HAVING can use COUNT(\*))
-- How does GROUP BY work with COUNT(_)? (answered: rows bucketed by group column, COUNT(_) counts rows per bucket)
+- WHERE vs HAVING? (answered: WHERE filters rows before grouping, HAVING filters groups after; only HAVING can use COUNT(*))
+- How does GROUP BY work with COUNT(*)? (answered: rows bucketed by group column, COUNT(*) counts rows per bucket)
 - What is an index, and what is the downside of too many? (answered: sorted B-tree so lookups take a few steps instead of reading all rows; costs extra storage and slower writes)
 - Scan vs seek? (answered: scan reads everything, seek jumps via the index; tiny tables may scan because it's cheaper)
 - Clustered vs non-clustered index? (to revisit: clustered = table rows stored in key order, one per table, usually the PK; non-clustered = separate sorted list pointing to rows)
 - A 10-million-row query is slow, what do you check first? (answered: filter with WHERE, check indexes; add: look at the execution plan first)
 - What is a transaction? (answered: several changes succeed or fail together; BEGIN TRAN, COMMIT makes permanent, ROLLBACK undoes)
 - What does ACID stand for? (partly: Atomicity all-or-nothing, Consistency rules always hold, Isolation concurrent transactions don't see each other's half-done work, Durability committed data survives a crash; only A and C seen so far)
+- What is the difference between TRAN and TRY...CATCH? (to revisit: TRAN groups changes into all-or-nothing; TRY...CATCH detects an error and jumps to CATCH where you ROLLBACK)
+- What happens if one statement in a transaction fails? (to answer: with TRY...CATCH, control jumps to CATCH, ROLLBACK undoes everything, nothing half-done)
 - What does git add do; staging vs committing? (to answer)
