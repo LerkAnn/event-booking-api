@@ -16,6 +16,7 @@
 - If early: add a stretch task inside the current week, don't jump ahead
 - Resign only after the bonus is paid in Feb (2-month notice)
 - Sessions: 3x40 min weekdays + 1x90 min weekend; 15 min minimum on bad days
+- Calendar note: Week 3 started 26 Oct. Week 2 leftovers were folded into Week 3 Session 1.
 
 ## Done
 - Week 0: GitHub, .NET 9, Docker, SSMS set up. Repo created and pushed.
@@ -26,30 +27,29 @@
 - Week 2, Session 1: blank-file challenge done. GROUP BY query with HAVING. Learned WHERE vs HAVING.
 - Week 2, Session 2: indexes (scan vs seek, B-tree idea). Created IX_Bookings_seat_id and IX_Bookings_user_id, added to schema.sql, pushed. Read an execution plan.
 - Week 2, Session 3: loaded 5,000 rows, saw Seek with index and Scan without, recreated the index. Learned BEGIN TRAN / COMMIT / ROLLBACK and ACID. Cleaned up load-test data.
-- Week 2, Session 4: received the TRY...CATCH transaction template (book seat Z11) and a CHECK constraint on Events.total_seats. Understood the idea (TRAN = draft, TRY...CATCH = alarm that triggers cleanup); still need to run both and write them myself.
+- Week 2, Session 4: received TRY...CATCH transaction template and CHECK constraint; understood the idea (TRAN = draft, TRY...CATCH = alarm that triggers cleanup).
+- Week 3, Session 1: ran the TRY...CATCH script (booked Z11) and break test, ran the CHECK constraint on Events.total_seats and saw it reject 0, created the .NET project EventBooking.Api (dotnet new webapi), ran it and opened the OpenAPI JSON. Committed and pushed. Learned why an API sits between client and database.
 
 ## Current
-- Week 2: Joins, GROUP BY, indexes, transactions, constraints + .NET project + EF Core. Transaction concepts understood; TRY...CATCH and CHECK still to run and practise.
+- Week 3: CRUD APIs, validation, error handling, Swagger, push to GitHub. Project created and running; no EF Core or endpoints of my own yet.
 
 ## Next
-- Week 2, Session 5 (15-40 min): run the Part 1 TRY...CATCH script (book Z11 for Zorus), then check Z11 is BOOKED with SELECT seat_number, seat_status_id FROM Seats WHERE row_label = 'Z'
-- Break test: change @user_id to 999 and use seat 12, read the error from CATCH, confirm Z12 stays AVAILABLE
-- Run the CHECK constraint ALTER TABLE, then the failing INSERT (total_seats = 0); add the ALTER line to schema.sql
-- Then: create the .NET project (dotnet new webapi -n EventBooking.Api, dotnet run, open Swagger), add EF Core packages after
-- Blank-file challenge later: write the TRY...CATCH template from memory (aim: by Week 5)
+- Week 3, Session 2: add EF Core packages (SqlServer + Design), create the Event entity and DbContext, connection string (password NOT in repo, use user-secrets or appsettings.Development.json in .gitignore), first GET /events endpoint
+- Add CK_Events_total_seats ALTER line to schema.sql if not done yet
+- Then: POST/PUT/DELETE events, validation, error handling, Swagger page
+- Blank-file challenge (weekend): write the TRY...CATCH template from memory
 - Leftover (cut first if tired): SQLBolt lessons 1-6
 - Optional: save the SA password outside the repo
-- Verify earlier cleanup: 1 booking and 5 seats before running Part 1
 
 ## Project state
-- Repo: event-booking-api, contains PROGRESS.md, schema.sql (2 indexes at the bottom), seed.sql
+- Repo: event-booking-api, contains PROGRESS.md, schema.sql (2 indexes at the bottom), seed.sql, EventBooking.Api (default webapi template)
 - Tools: .NET 9, Docker Desktop, SSMS; SQL Server 2025 in Docker as sql1 (port 1433, user sa)
-- Run it: open Docker Desktop, start container sql1 if stopped, connect SSMS to localhost,1433 (Trust server certificate)
+- Run it: open Docker Desktop, start container sql1 if stopped, connect SSMS to localhost,1433 (Trust server certificate). API: dotnet run --project EventBooking.Api, then open the printed URL + /openapi/v1.json or /weatherforecast, Ctrl+C to stop
 - Main tables: Events, Roles, Users, SeatStatuses, BookingStatuses, Seats, Bookings
 - Indexes: IX_Bookings_seat_id, IX_Bookings_user_id (plus automatic ones for PKs and UNIQUEs)
+- Constraint: CK_Events_total_seats (total_seats > 0)
 - Seeded lookups: Roles (CUSTOMER, ADMIN), SeatStatuses (AVAILABLE, HELD, BOOKED), BookingStatuses (PENDING_PAYMENT, CONFIRMED, CANCELLED, EXPIRED)
-- Sample data: seed.sql (deletes Bookings, Seats, Users, Events, then reinserts; never run on real data)
-- No .NET project yet
+- Sample data: seed.sql (deletes Bookings, Seats, Users, Events, then reinserts; never run on real data). Z11 is now BOOKED with a booking from the TRY...CATCH test, so reseed if you want a clean state
 - Risk: sql1 has no volume, so deleting the container loses the tables; rebuild with CREATE DATABASE EventBooking + schema.sql + seed.sql. Fix with a volume in Docker Compose (Week 7)
 
 ## Decisions
@@ -65,12 +65,11 @@
 - Index naming: IX_Table_column; index foreign keys that are searched often
 - Seed script looks up IDs by code/name, not hard-coded IDs
 - Transaction pattern: BEGIN TRY / BEGIN TRAN / changes / COMMIT / END TRY / BEGIN CATCH / IF @@TRANCOUNT > 0 ROLLBACK / END CATCH
+- API sits between client and database (security, business rules, DB stays private)
 - SA password stored outside the repo, never committed
 
 ## Stuck on
 - Double-booking rule: UNIQUE on seat_id would block rebooking after cancel; decide in Week 5
-- TRAN vs TRY...CATCH felt confusing (now explained: TRAN groups changes, TRY...CATCH detects failure and triggers ROLLBACK)
-- Feel I can't write the TRY...CATCH myself yet (normal; use the template, change the middle)
 
 ## Weak spots
 - SQL Server vs MySQL syntax (AUTO_INCREMENT vs IDENTITY)
@@ -82,9 +81,10 @@
 - Forgetting to scope GROUP BY queries to one event
 - Putting an index on the wrong table
 - Clustered vs non-clustered index (basic idea only)
-- TRY...CATCH + transaction: understand the flow, can't write it from scratch yet
+- TRY...CATCH + transaction: ran it, understand the flow, can't write it from scratch yet
 - ACID: seen Atomicity and Consistency; Isolation (Week 5) and Durability not yet by experience
 - Tired = lower understanding: on tired days do 15-min tasks, not new concepts
+- .NET project structure (Program.cs, .csproj) just started
 
 ## Interview questions I couldn't answer
 - What is Docker, and how is a container different from a VM? (to answer)
@@ -109,5 +109,7 @@
 - What is a transaction? (answered: several changes succeed or fail together; BEGIN TRAN, COMMIT makes permanent, ROLLBACK undoes)
 - What does ACID stand for? (partly: Atomicity all-or-nothing, Consistency rules always hold, Isolation concurrent transactions don't see each other's half-done work, Durability committed data survives a crash; only A and C seen so far)
 - What is the difference between TRAN and TRY...CATCH? (to revisit: TRAN groups changes into all-or-nothing; TRY...CATCH detects an error and jumps to CATCH where you ROLLBACK)
-- What happens if one statement in a transaction fails? (to answer: with TRY...CATCH, control jumps to CATCH, ROLLBACK undoes everything, nothing half-done)
+- What happens if one statement in a transaction fails? (to revisit: control jumps to CATCH, ROLLBACK undoes everything, nothing half-done; seen in the Z12 break test)
+- What is Swagger/OpenAPI? (to answer: standard JSON description of an API; tools generate docs and a test page from it)
+- What is a Web API, and why not let the client talk to the database directly? (to answer: security, business rules, keep the database private)
 - What does git add do; staging vs committing? (to answer)
