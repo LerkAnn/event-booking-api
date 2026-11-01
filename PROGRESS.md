@@ -1,11 +1,10 @@
 # PROGRESS.md
 
 ## Plan (10 weeks, Week 1 = 12 Oct)
-
 - W1: SQL basics + booking schema + SQL Server in Docker
 - W2: Joins, GROUP BY, indexes, transactions, constraints + .NET project + EF Core
 - W3: CRUD APIs, validation, error handling, Swagger, push to GitHub
-- W4: JWT auth + roles + basic tests
+- W4: JWT auth + roles + basic tests (xUnit)
 - W5: Booking logic, double-booking prevention, concurrency test
 - W6: Seat hold + background job + fake payment endpoint
 - W7: Redis caching, full docker compose up, logging
@@ -17,115 +16,115 @@
 - If early: add a stretch task inside the current week, don't jump ahead
 - Resign only after the bonus is paid in Feb (2-month notice)
 - Sessions: 3x40 min weekdays + 1x90 min weekend; 15 min minimum on bad days
-- Calendar note: Week 3 started 26 Oct. Week 2 leftovers folded into Week 3.
-- Full-day study sessions are planned with breaks (not cramming)
+- Calendar note: Week 3 started 26 Oct. Full-day study sessions are planned with breaks (not cramming).
+- Schedule note: Week 3 Session 4 may happen tonight or tomorrow; Week 4 stays 4 sessions + 1 extra setup session; worst case slips into Week 5, but auth and tests are not cut.
 
 ## Done
-
 - Week 0: GitHub, .NET 9, Docker, SSMS set up. Repo created and pushed.
-- Week 1, Session 1: SQL Server 2025 in Docker (container sql1), connected from SSMS, created EventBooking database, Events table.
-- Week 1, Session 2: designed schema; created all 7 tables with foreign keys.
-- Week 1, Session 3: schema.sql and seed.sql in repo, sample data, first JOIN.
-- Week 1, Session 4: wrote a 5-table JOIN myself. Quiz: primary key, PK vs UNIQUE, composite key.
-- Week 2, Session 1: blank-file challenge, GROUP BY + HAVING.
-- Week 2, Session 2: indexes (scan vs seek, B-tree idea); created IX_Bookings_seat_id and IX_Bookings_user_id.
-- Week 2, Session 3: 5,000-row load test, seek vs scan, BEGIN TRAN / COMMIT / ROLLBACK, ACID. Cleaned up.
-- Week 3, Session 1: created .NET project EventBooking.Api, ran it, opened OpenAPI JSON. Learned why an API sits between client and database.
-- Week 3, Session 2: added EF Core packages (SqlServer + Design, version 9), connection string in user-secrets, wrote Event entity (Models/Event.cs), AppDbContext (Data/AppDbContext.cs), registered it in Program.cs, wrote GET /events and got my 2 events back as JSON. Committed.
+- Week 1, Sessions 1-4: SQL Server 2025 in Docker (sql1), EventBooking DB, 7 tables with FKs, schema.sql, seed.sql, first JOINs, PK/UNIQUE/composite key quiz.
+- Week 2, Sessions 1-3: GROUP BY/HAVING, indexes (scan vs seek), IX_Bookings_seat_id and IX_Bookings_user_id, BEGIN TRAN/COMMIT/ROLLBACK, ACID.
+- Week 3, Session 1: created .NET project EventBooking.Api, ran it.
+- Week 3, Session 2: EF Core 9 packages, user-secrets connection string, Event entity, AppDbContext, GET /events.
+- Week 3, Session 3: CHECK constraint exists in DB (POST with totalSeats 0 trips it); wrote GET /events/{id} and POST /events; added Swagger UI (Swashbuckle.AspNetCore.SwaggerUI 7.*) and tested POST there; learned IDENTITY gaps; reseeded Events so there are 3 events (latest id 3).
 
 ## Current
-
-- Week 3: CRUD APIs, validation, error handling, Swagger. GET /events works. Still to do: GET /events/{id}, POST, PUT, DELETE, validation, error handling, Swagger page.
+- Week 3: CRUD APIs, validation, error handling, Swagger, controllers. GET list, GET by id, POST work. Still to do: API validation (400), PUT, DELETE, error handling, convert to EventsController.
 
 ## Next
-
-- Week 3, Session 3: start with the 2 carry-over items (teach me again, whole code + brief explanation, then I run them):
-    1. TRY...CATCH transaction: book seat Z11 for Zorus (then break test with user 999 on seat Z12)
-    2. CHECK constraint: ALTER TABLE Events ADD CONSTRAINT CK_Events_total_seats CHECK (total_seats > 0); then test INSERT with total_seats = 0 and read the error; add the ALTER line to schema.sql
-- Then the normal session task: GET /events/{id} and POST /events (LINQ, 404 when not found, 201 Created)
-- Fix typo in schema.sql: "REATE INDEX" must be "CREATE INDEX"
+- Week 3, Session 4 (tonight or tomorrow):
+  1. Walkthrough of Program.cs line by line (builder, AddOpenApi, AddDbContext, Build, pipeline, UseHttpsRedirection, MapGet, the WeatherForecast template code)
+  2. Re-explain URLs: path parameter (/events/2) vs query parameter (/events?id=2)
+  3. Controllers vs minimal APIs: convert the 3 endpoints to EventsController ([ApiController], [Route], [HttpGet], [HttpPost], constructor injection)
+  4. API validation: return 400 with a clear message for empty name or totalSeats <= 0 (before the DB CHECK fires)
+  5. PUT /events/{id} and DELETE /events/{id}; basic error handling (clean error response instead of raw 500)
+  6. Commit and push
+- Confirm done: CK_Events_total_seats ALTER line and the "CREATE INDEX" typo fix in schema.sql
+- Confirm done: TRY...CATCH script (Z11 booking + Z12 break test) actually run
+- Week 4, Session 0 (extra setup): install/check Visual Studio Community (workload: ASP.NET and web development), create solution (dotnet new sln -n EventBooking, dotnet sln add EventBooking.Api), open .sln in VS. Optional: delete the WeatherForecast template code.
+- Week 4: JWT auth + roles + BCrypt + [Authorize] + first xUnit tests
 - Blank-file challenge (weekend): write the TRY...CATCH template from memory
-- Leftover (cut first if tired): SQLBolt lessons 1-6
-- Optional: confirm SA password is saved outside the repo
+- Leftover (cut first): SQLBolt lessons 1-6
 
 ## Project state
-
-- Repo: event-booking-api, contains PROGRESS.md, schema.sql, seed.sql, EventBooking.Api (Models/Event.cs, Data/AppDbContext.cs, Program.cs with GET /events)
-- Tools: .NET 9, Docker Desktop, SSMS; SQL Server 2025 in Docker as sql1 (port 1433, user sa)
-- Run it: start Docker Desktop + sql1, then dotnet run --project EventBooking.Api, open printed URL + /events. Ctrl+C to stop
-- Connection string is in user-secrets (ConnectionStrings:Default), not in the repo
+- Repo: event-booking-api: PROGRESS.md, schema.sql, seed.sql, EventBooking.Api (Models/Event.cs, Data/AppDbContext.cs, Program.cs with GET /events, GET /events/{id}, POST /events, Swagger UI)
+- Tools: .NET 9, Docker Desktop, SSMS, VS Code (C# Dev Kit needed for red-line errors; moving to Visual Studio in Week 4)
+- Run it: start Docker Desktop + sql1, dotnet run --project EventBooking.Api, open the printed URL + /swagger in the normal browser (copy the URL from the terminal), Ctrl+C to stop
+- Connection string in user-secrets (ConnectionStrings:Default), not in the repo
 - Main tables: Events, Roles, Users, SeatStatuses, BookingStatuses, Seats, Bookings
 - Indexes: IX_Bookings_seat_id, IX_Bookings_user_id
-- CHECK constraint CK_Events_total_seats: NOT in the database yet (query returned empty)
 - Seeded lookups: Roles (CUSTOMER, ADMIN), SeatStatuses (AVAILABLE, HELD, BOOKED), BookingStatuses (PENDING_PAYMENT, CONFIRMED, CANCELLED, EXPIRED)
-- Sample data: seed.sql (deletes Bookings, Seats, Users, Events, then reinserts; never run on real data). Z11 booking status unknown, check before relying on it
-- Risk: sql1 has no volume, so deleting the container loses the tables; rebuild with CREATE DATABASE EventBooking + schema.sql + seed.sql. Fix with a volume in Docker Compose (Week 7)
+- Sample data: seed.sql (deletes Bookings, Seats, Users, Events, then reinserts; never run on real data). Events currently reseeded manually (3 events)
+- Risk: sql1 has no volume; deleting the container loses the tables. Rebuild with CREATE DATABASE EventBooking + schema.sql + seed.sql. Fix with a volume in Docker Compose (Week 7)
 
 ## Decisions
-
 - Stack: .NET 9, SQL Server 2025 image, EF Core 9 packages
-- snake_case column names, plural table names; C# uses PascalCase with [Table] and [Column] attributes
-- IDENTITY(1,1) primary keys (not GUID)
-- NVARCHAR for text; phone_number NVARCHAR(20) nullable
-- Lookup tables (Roles, SeatStatuses, BookingStatuses) with code, name, is_active
-- Passwords hashed in .NET (BCrypt, Week 4), stored in password_hash
-- created_at/updated_at default to SYSUTCDATETIME(); updated_at must be set by app code on update
-- Bookings has no event_id (seat already knows its event)
+- snake_case DB columns; C# PascalCase with [Table]/[Column]; no [Key] needed because EventId follows the ClassName+Id convention
+- IDENTITY(1,1) primary keys; gaps are normal
+- NVARCHAR for text; lookup tables with code, name, is_active
+- Passwords hashed with BCrypt in .NET (Week 4)
+- created_at/updated_at default to SYSUTCDATETIME(); app sets updated_at on update
+- Bookings has no event_id (seat knows its event)
 - Seats unique on (event_id, row_label, seat_number)
-- Index naming: IX_Table_column; index foreign keys that are searched often
-- Seed script looks up IDs by code/name, not hard-coded IDs
 - Transaction pattern: BEGIN TRY / BEGIN TRAN / changes / COMMIT / END TRY / BEGIN CATCH / IF @@TRANCOUNT > 0 ROLLBACK / END CATCH
-- Secrets (DB password) live in user-secrets, never in the repo
-- Minimal API style (app.MapGet etc.) in Program.cs for now
+- Secrets live in user-secrets, never in the repo
+- Minimal API style for now; switch to controllers (EventsController) in Session 4, since job code and interviews use controllers
+- Validation: API returns clean 400 first; DB CHECK constraint is the safety net
+- Use Swagger UI in the browser to test POST/PUT/DELETE
 
 ## Stuck on
-
 - Double-booking rule: UNIQUE on seat_id would block rebooking after cancel; decide in Week 5
-- TRY...CATCH and CHECK constraint: not run/understood yet, re-teach next session
+- Program.cs: only understand my 3 endpoints, not the template code
+- Controllers vs minimal APIs and URL path vs query parameters: need re-explaining
 
 ## Weak spots
-
-- SQL Server vs MySQL syntax (AUTO_INCREMENT vs IDENTITY)
-- PowerShell vs Linux command syntax (no backslash line breaks)
-- FOREIGN KEY needs the column declared first
-- Missing commas / typos in SQL (REATE INDEX)
-- JOIN syntax (working; keep practising)
+- SQL Server vs MySQL syntax; PowerShell vs Linux syntax
+- FOREIGN KEY needs the column declared first; typos in SQL
 - Variables only live within one batch; GO ends the batch
 - Clustered vs non-clustered index (basic idea only)
 - TRY...CATCH + transaction: can't write it from scratch yet
 - ACID: Isolation (Week 5) and Durability not yet by experience
-- EF Core flow: understand the big picture (request -> MapGet -> db.Events -> SQL -> JSON); DbContext, DI and LINQ code still unfamiliar
+- EF Core: big picture clear (request -> MapGet -> db.Events -> SQL -> JSON); DbContext, DI, LINQ code still unfamiliar
+- Typos in C# names (AppDbCOntext) and using MapGet instead of MapPost
 - Tired = lower understanding: on tired days do 15-min tasks, not new concepts
 
 ## Interview questions I couldn't answer
-
 - What is Docker, and how is a container different from a VM? (to answer)
 - What does -p 1433:1433 mean? (answered: host port : container port)
-- What is a primary key? (answered: uniquely identifies each row, no duplicates, no NULLs, referenced by foreign keys; one per table, can be composite)
-- Primary key vs UNIQUE constraint? (answered: one PK per table, many UNIQUEs allowed; PK can't be NULL, UNIQUE allows one NULL in SQL Server)
-- What is a composite key? (answered: PK or UNIQUE across 2+ columns; the combination must be unique)
-- IDENTITY vs GUID as primary key (partly; IDENTITY small, ordered, fast, guessable; GUID big, hard to guess, random GUIDs fragment the index)
+- What is a primary key? (answered: unique, no NULLs, referenced by FKs; one per table, can be composite)
+- Primary key vs UNIQUE? (answered: one PK, many UNIQUEs; UNIQUE allows one NULL in SQL Server)
+- What is a composite key? (answered: 2+ columns, combination unique)
+- IDENTITY vs GUID as primary key (partly; IDENTITY small, ordered, guessable; GUID big, hard to guess, fragments index)
 - IDENTITY vs AUTO_INCREMENT (answered: same idea, different syntax)
-- What is T-SQL? (answered: Microsoft's SQL dialect with variables, IF/WHILE, TRY...CATCH, TOP, stored procedures)
-- What is a foreign key and why use one? (answered; add: default blocks deleting a parent row, ON DELETE CASCADE removes children)
-- How should you store passwords, and what is a salt? (answered: one-way hash, random salt so identical passwords give different hashes)
-- Lookup table vs CHECK constraint for statuses? (to answer: lookup = FK-enforced, add values with INSERT, extra join; CHECK = simpler, needs schema change to add values)
-- DELETE vs TRUNCATE? (to revisit: DELETE row by row, allows WHERE, keeps IDENTITY counter; TRUNCATE empties fast, no WHERE, resets IDENTITY, fails if a FK points to the table)
-- What is GO? (to revisit: SSMS batch separator, not T-SQL; variables don't carry across batches)
-- WHERE vs HAVING? (answered: WHERE filters rows before grouping, HAVING filters groups after; only HAVING can use COUNT(\*))
-- How does GROUP BY work with COUNT(_)? (answered: rows bucketed by group column, COUNT(_) counts rows per bucket)
-- What is an index, and what is the downside of too many? (answered: sorted B-tree, few steps instead of reading all rows; extra storage and slower writes)
-- Scan vs seek? (answered: scan reads everything, seek jumps via the index; tiny tables may scan)
-- Clustered vs non-clustered index? (to revisit: clustered = table rows stored in key order, one per table, usually the PK; non-clustered = separate sorted list pointing to rows)
-- A 10-million-row query is slow, what do you check first? (answered: filter with WHERE, check indexes; add: look at the execution plan first)
-- What is a transaction? (answered: several changes succeed or fail together)
-- What does ACID stand for? (partly: only A and C seen so far)
-- TRAN vs TRY...CATCH? (to revisit: TRAN groups changes all-or-nothing; TRY...CATCH detects an error and jumps to CATCH where you ROLLBACK)
-- What happens if one statement in a transaction fails? (to revisit: jump to CATCH, ROLLBACK undoes everything)
+- Why are there gaps in IDENTITY values? (answered: counter never goes back; deletes, failed inserts, rollbacks, restarts leave gaps; DELETE doesn't reset it, TRUNCATE does)
+- What is T-SQL? (answered)
+- What is a foreign key and why use one? (answered; add: default blocks deleting parent row, ON DELETE CASCADE removes children)
+- How should you store passwords, and what is a salt? (answered: one-way hash, random salt)
+- Lookup table vs CHECK constraint for statuses? (to answer)
+- DELETE vs TRUNCATE? (answered: DELETE row by row, WHERE allowed, keeps IDENTITY; TRUNCATE fast, no WHERE, resets IDENTITY, blocked by FKs)
+- What is GO? (to revisit: SSMS batch separator, not T-SQL)
+- WHERE vs HAVING? (answered)
+- How does GROUP BY work with COUNT(*)? (answered)
+- What is an index, and the downside of too many? (answered)
+- Scan vs seek? (answered)
+- Clustered vs non-clustered index? (to revisit)
+- A 10-million-row query is slow, what first? (answered: check the execution plan, WHERE, indexes)
+- What is a transaction? (answered)
+- What does ACID stand for? (partly: A and C seen)
+- TRAN vs TRY...CATCH? (to revisit: TRAN groups changes; TRY...CATCH detects errors and triggers ROLLBACK)
+- What happens if one statement in a transaction fails? (to revisit)
 - What is Swagger/OpenAPI? (to answer: standard JSON description of an API; tools generate docs and a test page)
-- What is a Web API, and why not let the client talk to the database directly? (to answer: security, business rules, keep the database private)
-- What is EF Core, and what is a DbContext? (partly: EF Core translates C# to SQL; DbContext is the gateway to the database, DbSet = a table as a list)
-- What is dependency injection? (to answer: .NET creates objects like AppDbContext and hands them in, e.g. the db parameter in an endpoint)
-- What is LINQ, and how does EF Core know what SQL to write? (partly: C# queries like Where(...) are translated to SQL; nothing runs until ToListAsync)
-- How do you keep database passwords out of source control? (answered: user-secrets for local dev; environment variables / secret manager in production)
+- What is a Web API, and why not let the client talk to the DB directly? (to answer: security, business rules, DB stays private)
+- What is EF Core, and what is a DbContext? (partly)
+- What is dependency injection? (to answer: .NET creates objects like AppDbContext and hands them in)
+- What is LINQ? (partly: Language Integrated Query; C# Where(...) translated to SQL; nothing runs until ToListAsync)
+- FindAsync vs FirstOrDefaultAsync? (answered: FindAsync = by primary key only; FirstOrDefault = any condition)
+- What does Add vs SaveChangesAsync do? (answered: Add stages in memory, SaveChangesAsync sends it to the DB in one transaction)
+- What do async/await mean? (answered: wait for the result without blocking the server thread)
+- 200, 201, 400, 404? (200 OK, 201 Created, 400 client sent bad data, 404 not found)
+- API validation vs DB constraint? (answered: API returns friendly 400, DB CHECK is the last safety net)
+- Controllers vs minimal APIs? (to revisit: same job; controllers are class-based with attributes, minimal APIs are lightweight lambdas)
+- Path vs query parameter? (to revisit: /events/2 vs /events?id=2)
+- In a controller, what makes a method respond to POST? (to answer: [HttpPost])
+- What is xUnit? (answered: .NET test framework, [Fact] methods check results)
+- How do you keep DB passwords out of source control? (answered: user-secrets locally; env variables/secret manager in production)
 - What does git add do; staging vs committing? (to answer)
