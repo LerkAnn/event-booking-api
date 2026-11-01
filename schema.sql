@@ -70,4 +70,6 @@ CREATE TABLE Bookings(
 )
 
 CREATE INDEX IX_Bookings_seat_id ON Bookings (seat_id);
-REATE INDEX IX_Bookings_user_id ON Bookings (user_id);
+CREATE INDEX IX_Bookings_user_id ON Bookings (user_id);
+
+ALTER TABLE Events ADD CONSTRAINT CK_Events_total_seats CHECK (total_seats > 0);
