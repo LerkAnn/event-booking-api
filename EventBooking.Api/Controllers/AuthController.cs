@@ -38,4 +38,22 @@ public class AuthController : ControllerBase
         await _db.SaveChangesAsync();
         return Ok(new { user.UserId, user.Name, user.Email });
     }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> LoginUser(LoginRequest loginRequest)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == loginRequest.Email);
+
+        if (user is null)
+        {
+            return Unauthorized("Invalid email or password.");
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
+        {
+            return Unauthorized("Invalid email or password.");
+        }
+
+        return Ok("Login works");
+    }
 }
