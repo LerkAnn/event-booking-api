@@ -3,6 +3,12 @@ using EventBooking.Api.Dtos;
 using EventBooking.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.AspNetCore.Authorization;
 
 
 namespace EventBooking.Api.Controllers;
@@ -12,10 +18,12 @@ namespace EventBooking.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IConfiguration _config;
 
-    public AuthController(AppDbContext db)
+    public AuthController(AppDbContext db, IConfiguration config)
     {
         _db = db;
+        _config = config;
     }
 
     [HttpPost("register")]
@@ -54,6 +62,32 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid email or password.");
         }
 
-        return Ok("Login works");
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+            new Claim(ClaimTypes.Email, user.Email)
+        };
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var jwt = new JwtSecurityToken(
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: creds
+        );
+
+        var token = new JwtSecurityTokenHandler ().WriteToken(jwt);
+
+        return Ok(new { token });
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public IActionResult Me()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var email = User.FindFirst(ClaimTypes.Email)?.Value;
+
+        return Ok(new { userId, email });
     }
 }
