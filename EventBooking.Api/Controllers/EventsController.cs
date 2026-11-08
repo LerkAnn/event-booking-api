@@ -1,5 +1,6 @@
 using EventBooking.Api.Data;
 using EventBooking.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,6 +30,7 @@ public class EventsController : ControllerBase
         return ev is null ? NotFound() : Ok(ev);
     }
 
+    [Authorize(Roles = "ADMIN")]
     [HttpPost]
     public async Task<IActionResult> Create(Event ev)
     {
@@ -37,6 +39,7 @@ public class EventsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = ev.EventId }, ev);
     }
 
+    [Authorize(Roles = "ADMIN")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -47,6 +50,7 @@ public class EventsController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = "ADMIN")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Event updated)
     {

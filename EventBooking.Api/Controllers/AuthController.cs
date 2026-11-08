@@ -62,14 +62,17 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid email or password.");
         }
 
+        var roleCode = await _db.Roles.Where(r => r.RoleId == user.RoleId).Select(r => r.Code).FirstAsync();
+
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-            new Claim(ClaimTypes.Email, user.Email)
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Role, roleCode)
         };
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
+        
         var jwt = new JwtSecurityToken(
             claims: claims,
             expires: DateTime.UtcNow.AddHours(1),
@@ -87,7 +90,8 @@ public class AuthController : ControllerBase
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var email = User.FindFirst(ClaimTypes.Email)?.Value;
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-        return Ok(new { userId, email });
+        return Ok(new { userId, email, role });
     }
 }
