@@ -46,7 +46,14 @@ public class EventsController : ControllerBase
         var ev = await _db.Events.FindAsync(id);
         if (ev is null) return NotFound();
         _db.Events.Remove(ev);
-        await _db.SaveChangesAsync();
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict("Cannot delete this event because it has seats or bookings.");
+        }
         return NoContent();
     }
 
