@@ -71,5 +71,11 @@ CREATE TABLE Bookings(
 
 CREATE INDEX IX_Bookings_seat_id ON Bookings (seat_id);
 CREATE INDEX IX_Bookings_user_id ON Bookings (user_id);
+-- Only ONE active booking per seat. Active = booking_status_id 1 (PENDING_PAYMENT), 2 (CONFIRMED).
+-- Cancelled (3) and expired (4) rows are ignored, so a seat can be rebooked.
+-- Ids are hard-coded because a filtered index can't use a subquery. If BookingStatuses is re-seeded in a different order, update this.
+CREATE UNIQUE INDEX UX_Bookings_active_seat
+ON Bookings (seat_id)
+WHERE booking_status_id IN (1, 2);
 
 ALTER TABLE Events ADD CONSTRAINT CK_Events_total_seats CHECK (total_seats > 0);
