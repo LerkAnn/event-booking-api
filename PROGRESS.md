@@ -13,6 +13,7 @@
 - Tell me which interview questions each topic covers; quiz me occasionally
 - Don't let me overbuild. If behind, cut optional first. If early, suggest stretch tasks, not the next week
 - When I change schema, tell me exactly what to add or change in schema.sql / seed.sql
+- Before writing queries or code with many ids, list which tables and ids each step needs
 - Session format: I send "Week X, Session Y, goal: \_\_\_" plus PROGRESS.md
 - Never cut: booking logic, auth, concurrency test, Docker Compose, system design basics
 
@@ -32,7 +33,7 @@
 - Resign only after the bonus is paid in Feb (2-month notice)
 - Sessions: 3x40 min weekdays + 1x90 min weekend; 15 min minimum on bad days
 - Calendar note: Week 3 started 26 Oct. Full-day study sessions are planned with breaks (not cramming).
-- Schedule note: Week 4 done (auth, roles). Week 5, Sessions 1-3 done (xUnit, error handling, double-booking rule in the DB, SQL TRY...CATCH, booking flow design). Remaining Week 5: booking logic in C#, concurrency test (never cut).
+- Schedule note: Week 4 done (auth, roles). Week 5 done except the concurrency test and the service class, which moved to Week 6, Session 1 (concurrency test first, never cut).
 
 ## Done
 
@@ -45,21 +46,22 @@
 - Week 4, Session 2: JwtBearer package added; Jwt:Key stored in user-secrets; LoginRequest DTO; POST /api/auth/login (FirstOrDefaultAsync by email, BCrypt.Verify, same 401 message for unknown email and wrong password). Understood why hashes can't be compared with == (random salt), authentication vs authorization, user enumeration. Committed and pushed.
 - Week 4, Session 3: login builds and returns a JWT (claims: NameIdentifier = user id, Email; expires in 1 hour; HmacSha256; key from Jwt:Key via IConfiguration injected in AuthController). Program.cs: AddAuthentication + AddJwtBearer (validates signature and lifetime), UseAuthentication, UseAuthorization before MapControllers; Swagger Authorize button (Bearer scheme). GET /api/auth/me with [Authorize]. Understood JWT = header.payload.signature, payload is encoded not encrypted, stateless auth. Committed and pushed.
 - Week 4, Session 4: Role entity (Models/Role.cs) + DbSet<Role>; login looks up the role code and adds ClaimTypes.Role to the token; /me returns userId, email, role; zorus2@gmail.com is ADMIN; [Authorize(Roles = "ADMIN")] on POST/PUT/DELETE events, GET public. Tested 401 / 403 / 200. Understood 401 vs 403, role-based authorization, role-in-token tradeoff (stale until expiry). Committed and pushed.
-- Week 5, Session 1: xUnit test project EventBooking.Tests (added to the .sln, references EventBooking.Api). RegisterRequestTests: Register_ShortPassword_FailsValidation (Assert.False) and a valid-request test (Assert.True), using Validator.TryValidateObject with all-properties true; proved the test can fail. Understood Arrange/Act/Assert, unit vs integration tests, why test validation rules. Friendly error handling: EventsController.Delete wraps SaveChangesAsync in try/catch DbUpdateException and returns 409 Conflict; tested 409 (event with seats), 204 (new event), 401, 403. Understood 409 vs 500, why catch a specific exception. Committed and pushed.
-- Week 5, Session 2: decided the double-booking rule = option B (keep cancelled/expired bookings; only one ACTIVE booking per seat). Added filtered unique index UX_Bookings_active_seat ON Bookings(seat_id) WHERE booking_status_id IN (1, 2) (1 = PENDING_PAYMENT, 2 = CONFIRMED; 3 = CANCELLED, 4 = EXPIRED). Tested in SSMS: second active booking for Z10 rejected; after cancelling the old booking, rebooking succeeded. Understood how a filtered unique index works. schema.sql updated with the index and a comment.
-- Week 5, Session 3: wrote the SQL TRY...CATCH + transaction script myself (4 DECLARE lookups before BEGIN TRY; BEGIN TRAN; INSERT Bookings + UPDATE Seats to BOOKED; COMMIT; CATCH with IF @@TRANCOUNT > 0 ROLLBACK and ERROR_MESSAGE()). Booked Z12 successfully. Break tests passed: INSERT with seat_id 99999 (FK error, no row added) and UPDATE writing status 99999 (INSERT undone by ROLLBACK). Learned: TRAN = one unit, TRY...CATCH = error handler, the transaction does not undo itself (CATCH must ROLLBACK); an UPDATE matching 0 rows is not an error; an open transaction holds locks until COMMIT/ROLLBACK or the connection drops. Understood why Bookings and Seats.seat_status_id must change together. Designed the booking flow on paper (see Decisions). Understood who wins a race: the DB serializes by lock on the index key, exactly one winner.
+- Week 5, Session 1: xUnit test project EventBooking.Tests (added to the .sln, references EventBooking.Api). RegisterRequestTests: Register_ShortPassword_FailsValidation (Assert.False) and a valid-request test (Assert.True), using Validator.TryValidateObject with all-properties true; proved the test can fail. Understood Arrange/Act/Assert, unit vs integration tests, why test validation rules. Friendly error handling: EventsController.Delete wraps SaveChangesAsync in try/catch DbUpdateException and returns 409 Conflict; tested 409, 204, 401, 403. Committed and pushed.
+- Week 5, Session 2: decided the double-booking rule = option B (keep cancelled/expired bookings; only one ACTIVE booking per seat). Added filtered unique index UX_Bookings_active_seat ON Bookings(seat_id) WHERE booking_status_id IN (1, 2) (1 = PENDING_PAYMENT, 2 = CONFIRMED; 3 = CANCELLED, 4 = EXPIRED). Tested in SSMS. schema.sql has the index and a comment. Committed and pushed.
+- Week 5, Session 3: wrote the SQL TRY...CATCH + transaction script myself (DECLARE lookups before BEGIN TRY; BEGIN TRAN; INSERT Bookings + UPDATE Seats to BOOKED; COMMIT; CATCH with IF @@TRANCOUNT > 0 ROLLBACK and ERROR_MESSAGE()). Break tests passed (FK failure on INSERT; failing UPDATE undoes the INSERT). Learned TRAN vs TRY...CATCH, open transactions hold locks, an UPDATE matching 0 rows is not an error. Designed the booking flow on paper. Understood who wins a race (lock on the index key, exactly one winner). Committed and pushed.
+- Week 5, Session 4: entities Seat, Booking, SeatStatus, BookingStatus (Models/, boilerplate generated) + DbSets in AppDbContext; OnModelCreating sets Booking CreatedAt/UpdatedAt to HasDefaultValueSql("SYSUTCDATETIME()"); BookingRequest DTO (SeatId only, [Range(1, int.MaxValue)]); BookingsController: POST /api/bookings with [Authorize]; user id from the token (int.Parse of NameIdentifier), seat lookup (404 if missing), seat must be AVAILABLE (409), look up CONFIRMED and BOOKED statuses, Bookings.Add + seat.SeatStatusId = BOOKED, one SaveChangesAsync in try/catch DbUpdateException -> 409, returns BookingId and SeatId. Tested in Swagger and SSMS: free seat 200, same seat again 409, missing seat 404, no token 401; booking row and seat status both correct, created_at filled. Understood: user id from the token (signed, can't be changed), atomic = all or nothing, one SaveChangesAsync wraps all changes in one transaction. Fixed my own bug of forgetting \_db.Bookings.Add.
 
 ## Current
 
-- Week 5: booking logic, double-booking prevention, concurrency test. Sessions 1-3 done. DB rule is in place and the SQL pattern is proven; C# booking code not started.
+- Week 5 booking endpoint done. Remaining: concurrency test and the service class, moved to Week 6, Session 1.
 
 ## Next
 
-- Week 5, Session 4: C# booking, step by step. Seat and Booking entities (+ DbSets), BookingRequest DTO (SeatId only), POST /api/bookings with [Authorize] (user id from the token, seat id from the body), checks in order (user, seat exists = 404, seat AVAILABLE else 409), one transaction (INSERT booking + UPDATE seat), catch DbUpdateException for the index race -> 409
-- Week 5: concurrency test (two requests at once, exactly one succeeds); ACID Isolation by experience; move logic into a service class
-- Confirm done: schema.sql has the UX_Bookings_active_seat index and comment (commit it)
-- Side practice (outside the project timeline, only if there is spare time): write DECLARE-lookup + INSERT queries from a blank file, e.g. insert a booking for zorus2@gmail.com on seat Z13 with status PENDING_PAYMENT; retype the TRY...CATCH script from memory
-- Weekend / blank-file challenge: retype the login method + token generation in C# from memory
+- Week 6, Session 1: concurrency test first (never cut): fire two simultaneous POST /api/bookings for the same seat, exactly one gets 200 and the other 409; this makes the DbUpdateException catch fire for real and shows Isolation by experience. Then move the booking logic into a service class (BookingService, injected into the controller; controller stays thin)
+- Week 6: seat hold (PENDING_PAYMENT) + background job to expire holds + fake payment endpoint
+- Confirm done: schema.sql has the UX_Bookings_active_seat index and comment
+- Side practice (outside the project timeline, only if there is spare time): write DECLARE-lookup + INSERT queries from a blank file; retype the TRY...CATCH script from memory
+- Weekend / blank-file challenge: retype the login method + token generation in C# from memory; retype the booking endpoint from memory
 - Optional: a join query (Bookings + Users + Seats + statuses) to read booking data with names instead of ids
 - Optional: rename the second test to Register_ValidRequest_PassesValidation; make sure Assert.NotEmpty is removed from the first test
 - Optional: run a test in Visual Studio Test Explorer with Debug and inspect the results list
@@ -68,29 +70,30 @@
 - Optional stretch: call /me with a tampered token (change one character) and see the 401
 - Later: replace hard-coded RoleId = 1 with a lookup by role code; the filtered index also hard-codes status ids (1, 2), so keep BookingStatuses seed order fixed
 - Later: for DbUpdateException, check the inner SQL error number (547 = FK violation, 2601/2627 = duplicate key) instead of assuming every save failure is one cause
+- Later: null checks on status lookups (available/confirmed/booked) in BookingsController
 - Later (production): set ValidateIssuer/ValidateAudience with real values; use a different Jwt:Key from a secret store
 - Leftover (cut first): SQLBolt lessons 1-6
 
 ## Project state
 
-- Repo: event-booking-api: PROGRESS.md, schema.sql, seed.sql, EventBooking.sln, EventBooking.Api (Models/Event.cs, Models/User.cs, Models/Role.cs, Dtos/RegisterRequest.cs, Dtos/LoginRequest.cs, Data/AppDbContext.cs, Controllers/EventsController.cs, Controllers/AuthController.cs, Program.cs), EventBooking.Tests (RegisterRequestTests.cs)
+- Repo: event-booking-api: PROGRESS.md, schema.sql, seed.sql, EventBooking.sln, EventBooking.Api (Models/Event.cs, User.cs, Role.cs, Seat.cs, Booking.cs, SeatStatus.cs, BookingStatus.cs; Dtos/RegisterRequest.cs, LoginRequest.cs, BookingRequest.cs; Data/AppDbContext.cs; Controllers/EventsController.cs, AuthController.cs, BookingsController.cs; Program.cs), EventBooking.Tests (RegisterRequestTests.cs)
 - Tools: .NET 9, Docker Desktop, SSMS, Visual Studio 2022 (run/debug C#), VS Code (SQL files, quick edits)
 - Packages: EF Core 9 (SqlServer), BCrypt.Net-Next, Microsoft.AspNetCore.Authentication.JwtBearer 9.x (wired up in Program.cs); xUnit in the test project
 - Run it: start Docker Desktop + sql1, open EventBooking.sln in VS, pick https profile, F5, go to https://localhost:7032/swagger. Stop the app before renaming files.
 - If VS shows "ExecutionEngineException" at login: use Ctrl+F5 or dotnet run --project EventBooking.Api --launch-profile https; update VS if it repeats (happened once, fixed itself)
 - Run tests: dotnet test (from the repo root); no Docker or running API needed for the current tests
 - Test with a token: POST /api/auth/login, copy the token without quotes, click Authorize in Swagger, paste, Authorize, Close. Log in again after any role change.
-- Endpoints: GET /api/events (public), GET /api/events/{id} (public), POST/PUT/DELETE /api/events ([Authorize(Roles = "ADMIN")]; DELETE returns 409 if the event has seats/bookings); POST /api/auth/register; POST /api/auth/login (returns { token }); GET /api/auth/me ([Authorize])
+- Endpoints: GET /api/events (public), GET /api/events/{id} (public), POST/PUT/DELETE /api/events ([Authorize(Roles = "ADMIN")]; DELETE returns 409 if the event has seats/bookings); POST /api/auth/register; POST /api/auth/login (returns { token }); GET /api/auth/me ([Authorize]); POST /api/bookings ([Authorize]; body { seatId }; 200 / 404 / 409 / 401)
 - User-secrets: ConnectionStrings:Default, Jwt:Key (never in the repo, never pasted in chats)
 - Main tables: Events, Roles, Users, SeatStatuses, BookingStatuses, Seats, Bookings
 - Users table: user_id, name, email (unique), password_hash, phone_number (nullable), role_id (FK to Roles), created_at, updated_at. Roles seeded: CUSTOMER = 1, ADMIN = 2
 - BookingStatuses ids: 1 PENDING_PAYMENT, 2 CONFIRMED, 3 CANCELLED, 4 EXPIRED (active = 1, 2)
 - Indexes: IX_Bookings_seat_id, IX_Bookings_user_id, UX_Bookings_active_seat (filtered unique on Bookings(seat_id) WHERE booking_status_id IN (1, 2))
 - Test users: zorus@gmail.com (seed, fake hash, cannot log in); zorus2@gmail.com (ADMIN, can log in); a second registered user (CUSTOMER)
-- Test data note: Z10, Z11/Z12 now have test bookings (and Z10 a CANCELLED one) from SQL tests; Z13 is still AVAILABLE; run seed.sql to reset
+- Test data note: several seats (Z10 to Z13) now have test bookings from SQL and Swagger tests; run seed.sql to reset
 - Risk: sql1 has no volume; deleting the container loses the tables. Rebuild with CREATE DATABASE EventBooking + schema.sql + seed.sql. Fix with a volume in Docker Compose (Week 7). After a rebuild, re-register users and re-promote the admin with SQL UPDATE.
 - Risk: RoleId = 1 and the index's status ids (1, 2) are hard-coded; break if lookup tables are re-seeded in a different order
-- Risk: the Seat entity, Booking entity and booking endpoints do not exist yet (only the tables)
+- Risk: booking logic lives in the controller until the service class is written
 
 ## Decisions
 
@@ -103,17 +106,19 @@
 - Roles: role code (CUSTOMER / ADMIN) goes into the token as ClaimTypes.Role; [Authorize(Roles = "ADMIN")] must match the code exactly. Accepted downside: role changes apply only after the token expires or the user logs in again
 - Controllers (not minimal APIs); ControllerBase (not Controller); REST-style routes, lowercase (e.g. [Route("api/auth")], [HttpPost("register")])
 - Folders: Models = entities (DB shape), Dtos = request/response shapes (API shape), Data = DbContext, Controllers (plural). Namespace matches folder; file-scoped namespace (namespace X;)
-- Never accept an entity as request body; use a DTO. Server decides RoleId and PasswordHash
+- Never accept an entity as request body; use a DTO. Server decides RoleId, PasswordHash, user id (from token) and booking status
 - Use the full name BCrypt.Net.BCrypt.HashPassword / Verify (the using shortcut conflicts with the namespace name)
 - Validation: model attributes give a friendly 400 first; code check (e.g. duplicate email -> 409) next; DB constraint (CHECK/UNIQUE) is the safety net
-- Double-booking rule (option B): bookings are kept after cancel/expiry; only one ACTIVE booking (status PENDING_PAYMENT or CONFIRMED) per seat, enforced by a filtered unique index in the DB (works even when two requests race), with a friendly check/409 in C# on top
-- Booking flow design (POST /api/bookings): user id from the token, seat id from the request body; checks in order: user exists (quick sanity check), seat exists (404), seat AVAILABLE (else 409); one transaction: INSERT Bookings + UPDATE Seats to BOOKED (Bookings = receipt, Seats status = the label; they must always agree); errors: no token 401, seat missing 404, seat already booked 409, two simultaneous requests -> index rejects the second -> DbUpdateException -> 409 (not 400; 400 is for malformed requests)
-- Race rule: the DB serializes writes to the same index key with locks; exactly one winner, one loser. The C# check alone is not enough (both requests can pass it), so the index is the final guard
+- Double-booking rule (option B): bookings are kept after cancel/expiry; only one ACTIVE booking per seat, enforced by a filtered unique index in the DB, with a friendly check/409 in C# on top
+- Booking flow (POST /api/bookings): user id from the token, seat id from the body; seat exists (404), seat AVAILABLE (409); Bookings.Add + seat status BOOKED in one SaveChangesAsync (one transaction); DbUpdateException -> 409 (not 400)
+- Race rule: the DB serializes writes to the same index key with locks; exactly one winner. The C# check alone is not enough (both requests can pass it), so the index is the final guard and the catch makes the loser's failure a clean 409
+- EF Core: one SaveChangesAsync = one transaction; use BeginTransactionAsync only when several saves must be one unit
+- Booking CreatedAt/UpdatedAt use HasDefaultValueSql("SYSUTCDATETIME()") so the DB fills them
 - Catch specific exceptions (DbUpdateException), not all of Exception; only wrap the SaveChangesAsync call
 - Flat early-return style in controller methods (no deep nested ifs)
 - Unit tests: Arrange / Act / Assert; test names like Thing_Condition_ExpectedResult; unit tests need no DB or server
 - No EF migrations or seed code; schema.sql and seed.sql by hand
-- Logic moves to service classes around Week 5; controllers stay thin
+- Logic moves to service classes (BookingService, Week 6, Session 1); controllers stay thin
 - Secrets in user-secrets, never in the repo (JWT key too)
 - Test with Swagger UI
 
@@ -127,8 +132,9 @@
 - SQL Server vs MySQL syntax; PowerShell vs Linux syntax
 - Clustered vs non-clustered index (basic idea only)
 - Writing DECLARE-lookup + INSERT queries from memory (know the logic, forget which table/ids); TRY...CATCH script done with a template, retype from memory later
-- ACID: remember what each letter means (A all-or-nothing, C rules always hold, I parallel transactions don't see half-done work, D committed survives a crash); Isolation and Durability not yet by experience
+- ACID: remember what each letter means (A all-or-nothing, C rules always hold, I parallel transactions don't see half-done work, D committed survives a crash); Isolation and Durability not yet by experience (concurrency test next)
 - Lots of ids at once (user, seat, statuses) is confusing: list the tables and which ids each step needs before writing
+- Why the DB index AND the catch both matter (index = prevents double booking; catch = clean 409 for the loser); I tend to answer "better error message" only
 - EF Core, DI and LINQ: big picture clear, details still unfamiliar
 - JWT setup in Program.cs and token generation: followed the steps, but can't write from memory yet
 - Tired = lower understanding: on tired days do 15-min tasks, not new concepts
@@ -151,12 +157,14 @@
 - What is an index, downside of too many; scan vs seek (answered)
 - Clustered vs non-clustered index? (to revisit)
 - What is a filtered unique index, and why use one for bookings? (answered: only rows matching the WHERE are in the index, so cancelled rows don't block rebooking)
-- Why enforce "one active booking per seat" in the DB and not only in C#? (answered: two requests can both pass a C# check; the index lets only one through. Note: the DB does NOT run one item at a time, it runs many in parallel and only serializes conflicting writes on the same key)
+- Why enforce "one active booking per seat" in the DB and not only in C#? (partly: two requests can both pass a C# check; the index lets only one through; the catch only makes the loser's error a clean 409. The DB does NOT run one item at a time, it runs many in parallel and only serializes conflicting writes on the same key)
 - What is a transaction? (answered); ACID (partly: know the four letters' meaning; A and C seen in practice, I and D by experience later)
+- What does "atomic" mean, and how does one SaveChangesAsync give it? (answered: all or nothing; EF sends all pending changes in one transaction)
 - TRAN vs TRY...CATCH? (answered: TRAN = one unit, all-or-nothing; TRY...CATCH = error handler; the CATCH must run ROLLBACK because the transaction does not undo itself)
 - What happens if one statement in a transaction fails? (answered: jump to CATCH, ROLLBACK undoes earlier statements too)
 - What happens if a transaction never gets COMMIT or ROLLBACK? (answered: stays open holding locks; rolled back if the connection drops)
 - Two requests book the same seat at the same instant: who wins? (answered: the DB locks the index key, one gets the lock first, the other waits and then fails with a duplicate key; exactly one winner, 409 for the loser)
+- Why does the user id come from the token and not the request body? (answered: token is signed, client can't change it, so nobody can book as someone else)
 - What is Swagger/OpenAPI? (to answer)
 - What is a Web API, and why not let the client talk to the DB directly? (to answer)
 - What is EF Core, and what is a DbContext? (partly)
