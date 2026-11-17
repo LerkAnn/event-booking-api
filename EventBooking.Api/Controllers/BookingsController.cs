@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.Data;
+using EventBooking.Api.Services;
+using System.Diagnostics;
 
 namespace EventBooking.Api.Controllers;
 
@@ -13,10 +15,11 @@ namespace EventBooking.Api.Controllers;
 [Route("api/bookings")]
 public class BookingsController : ControllerBase
 {
-    private readonly AppDbContext _db;
-    public BookingsController(AppDbContext db)
+    private readonly IBookingService _bookingService;
+
+    public BookingsController(IBookingService bookingService)
     {
-        _db = db;
+        _bookingService = bookingService;
     }
 
     [Authorize]
@@ -24,40 +27,18 @@ public class BookingsController : ControllerBase
     public async Task<IActionResult> CreateBooking(BookingRequest request)
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        var seat = await _db.Seats.FindAsync(request.SeatId);
-        if (seat == null)
+        var result = await _bookingService.CreateBookingAsync(userId, request.SeatId);
+        switch (result)
         {
-            return NotFound("Seat not found.");
+            case BookingResult.SeatNotFound:
+                return NotFound("Seat not found.");
+            case BookingResult.SeatNotAvailable:
+                return Conflict("Seat is not available.");
+            case BookingResult.Conflict:
+                return Conflict("Seat was just taken by someone else.");
+            default:
+                return Ok(new { seatId = request.SeatId });
         }
-        var available = await _db.SeatStatuses.FirstOrDefaultAsync(s => s.Code == "AVAILABLE");
-
-        if (seat.SeatStatusId != available.SeatStatusId)
-        {
-            return Conflict("Seat is not available.");
-        }
-
-        var confirmed = await _db.BookingStatuses.FirstOrDefaultAsync(b => b.Code == "CONFIRMED");
-        var booked = await _db.SeatStatuses.FirstOrDefaultAsync(s => s.Code == "BOOKED");
-
-        var booking = new Booking
-        {
-            UserId = userId,
-            SeatId = seat.SeatId,
-            BookingStatusId = confirmed.BookingStatusId
-        };
-        _db.Bookings.Add(booking);
-        seat.SeatStatusId = booked.SeatStatusId;
-        
-        try
-        {
-            await _db.SaveChangesAsync();
-        }
-        catch (DbUpdateException)
-        {
-            return Conflict("Seat was just taken by someone else.");
-        }
-
-        return Ok(new { booking.BookingId, booking.SeatId });
     }
 
 }
