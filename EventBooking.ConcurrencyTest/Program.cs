@@ -3,10 +3,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 
 var client = new HttpClient { BaseAddress = new Uri("https://localhost:7032") };
+var email = Environment.GetEnvironmentVariable("TEST_EMAIL");
+var password = Environment.GetEnvironmentVariable("TEST_PASSWORD");
 
 // 1. Log in
 var loginResponse = await client.PostAsJsonAsync("/api/auth/login",
-    new { email = "meow@gmail.com", password = "meow" });
+    new { email, password });
 loginResponse.EnsureSuccessStatusCode();
 
 var loginJson = await loginResponse.Content.ReadFromJsonAsync<JsonElement>();

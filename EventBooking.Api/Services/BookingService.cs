@@ -27,17 +27,17 @@ public class BookingService : IBookingService
             return BookingResult.SeatNotAvailable;
         }
 
-        var confirmed = await _db.BookingStatuses.FirstOrDefaultAsync(b => b.Code == "CONFIRMED");
-        var booked = await _db.SeatStatuses.FirstOrDefaultAsync(s => s.Code == "BOOKED");
+        var pendingPayment = await _db.BookingStatuses.FirstOrDefaultAsync(b => b.Code == "PENDING_PAYMENT");
+        var held = await _db.SeatStatuses.FirstOrDefaultAsync(s => s.Code == "HELD");
 
         var booking = new Booking
         {
             UserId = userId,
             SeatId = seat.SeatId,
-            BookingStatusId = confirmed.BookingStatusId
+            BookingStatusId = pendingPayment.BookingStatusId
         };
         _db.Bookings.Add(booking);
-        seat.SeatStatusId = booked.SeatStatusId;
+        seat.SeatStatusId = held.SeatStatusId;
 
         try
         {
