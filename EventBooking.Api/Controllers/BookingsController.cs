@@ -41,4 +41,24 @@ public class BookingsController : ControllerBase
         }
     }
 
+    [Authorize]
+    [HttpPost("{id}/pay")]
+    public async Task<IActionResult> Pay(int id)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var result = await _bookingService.PayBookingAsync(userId, id);
+        switch (result)
+        {
+            case PaymentResults.BookingNotFound:
+                return NotFound("Booking not found.");
+            case PaymentResults.NotTheOwner:
+                return NotFound("Booking not found.");
+            case PaymentResults.Conflict:
+                return Conflict("Booking got conflict, please try again.");
+            case PaymentResults.BookingNotPending:
+                return Conflict("The booking is not pending for payment");
+            default:
+                return Ok("Seat is paid.");
+        }
+    }
 }
