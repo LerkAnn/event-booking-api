@@ -27,8 +27,8 @@ public class BookingsController : ControllerBase
     public async Task<IActionResult> CreateBooking(BookingRequest request)
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        var result = await _bookingService.CreateBookingAsync(userId, request.SeatId);
-        switch (result)
+        var outcome = await _bookingService.CreateBookingAsync(userId, request.SeatId);
+        switch (outcome.Result)
         {
             case BookingResult.SeatNotFound:
                 return NotFound("Seat not found.");
@@ -37,7 +37,7 @@ public class BookingsController : ControllerBase
             case BookingResult.Conflict:
                 return Conflict("Seat was just taken by someone else.");
             default:
-                return Ok(new { seatId = request.SeatId });
+                return Ok(new { bookingId = outcome.BookingId, seatId = request.SeatId });
         }
     }
 

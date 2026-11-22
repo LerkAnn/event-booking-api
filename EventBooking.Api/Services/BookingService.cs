@@ -13,18 +13,18 @@ public class BookingService : IBookingService
         _db = db;
     }
 
-    public async Task<BookingResult> CreateBookingAsync(int userId, int seatId)
+    public async Task<CreateBookingOutcome> CreateBookingAsync(int userId, int seatId)
     {
         var seat = await _db.Seats.FindAsync(seatId);
         if (seat == null)
         {
-            return BookingResult.SeatNotFound;
+            return new CreateBookingOutcome(BookingResult.SeatNotFound);
         }
         var available = await _db.SeatStatuses.FirstOrDefaultAsync(s => s.Code == "AVAILABLE");
 
         if (seat.SeatStatusId != available.SeatStatusId)
         {
-            return BookingResult.SeatNotAvailable;
+            return new CreateBookingOutcome(BookingResult.SeatNotAvailable);
         }
 
         var pendingPayment = await _db.BookingStatuses.FirstOrDefaultAsync(b => b.Code == "PENDING_PAYMENT");
@@ -45,10 +45,10 @@ public class BookingService : IBookingService
         }
         catch (DbUpdateException)
         {
-            return BookingResult.Conflict;
+            return new CreateBookingOutcome(BookingResult.Conflict);
         }
 
-        return BookingResult.Created;
+        return new CreateBookingOutcome(BookingResult.Created, booking.BookingId);
     }
 
     public async Task<PaymentResults> PayBookingAsync(int userId, int bookingId)
@@ -64,15 +64,27 @@ public class BookingService : IBookingService
         {
             return PaymentResults.NotTheOwner;
         }
-        if(booking.BookingStatusId != pendingPayment.BookingStatusId)
+        if (booking.BookingStatusId != pendingPayment.BookingStatusId)
         {
             return PaymentResults.BookingNotPending;
         }
 
         var confirmedPayment = await _db.BookingStatuses.FirstOrDefaultAsync(b => b.Code == "CONFIRMED");
         var booked = await _db.SeatStatuses.FirstOrDefaultAsync(s => s.Code == "BOOKED");
-        booking.BookingStatusId = confirmedPayment.BookingStatusId;
-        booking.UpdatedAt = DateTime.UtcNow;
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+
+        var rows = await _db.Bookings
+            .Where(b => b.BookingId == bookingId && b.BookingStatusId == pendingPayment.BookingStatusId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(b => b.BookingStatusId, confirmedPayment.BookingStatusId)
+                .SetProperty(b => b.UpdatedAt, DateTime.UtcNow));
+
+        if (rows == 0)
+        {
+            return PaymentResults.BookingNotPending;
+        }
+
         var seat = await _db.Seats.FindAsync(booking.SeatId);
         seat.SeatStatusId = booked.SeatStatusId;
 
@@ -84,7 +96,39 @@ public class BookingService : IBookingService
         {
             return PaymentResults.Conflict;
         }
-
+        await tx.CommitAsync();
         return PaymentResults.Paid;
+    }
+
+    public async Task<int> ExpireHoldsAsync(TimeSpan maxAge)
+    {
+        var pendingPayment = await _db.BookingStatuses.FirstOrDefaultAsync(s => s.Code == "PENDING_PAYMENT");
+        var expired = await _db.BookingStatuses.FirstOrDefaultAsync(s => s.Code == "EXPIRED");
+        var available = await _db.SeatStatuses.FirstOrDefaultAsync(s => s.Code == "AVAILABLE");
+
+        var bookings = await _db.Bookings
+            .Where(b => b.BookingStatusId == pendingPayment!.BookingStatusId
+                     && b.CreatedAt < DateTime.UtcNow - maxAge)
+            .ToListAsync();
+
+        foreach (var booking in bookings)
+        {
+            booking.BookingStatusId = expired!.BookingStatusId;
+            booking.UpdatedAt = DateTime.UtcNow;
+
+            var seat = await _db.Seats.FindAsync(booking.SeatId);
+            seat!.SeatStatusId = available!.SeatStatusId;
+        }
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            return 0;
+        }
+
+        return bookings.Count;
     }
 }
