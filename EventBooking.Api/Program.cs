@@ -51,6 +51,7 @@ builder.Services
         };
     });
 
+builder.Services.AddHostedService<HoldExpiryWorker>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 
 var app = builder.Build();
