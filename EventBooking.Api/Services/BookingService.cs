@@ -105,10 +105,11 @@ public class BookingService : IBookingService
         var pendingPayment = await _db.BookingStatuses.FirstOrDefaultAsync(s => s.Code == "PENDING_PAYMENT");
         var expired = await _db.BookingStatuses.FirstOrDefaultAsync(s => s.Code == "EXPIRED");
         var available = await _db.SeatStatuses.FirstOrDefaultAsync(s => s.Code == "AVAILABLE");
+        var cutoff = DateTime.UtcNow - maxAge;
 
         var bookings = await _db.Bookings
             .Where(b => b.BookingStatusId == pendingPayment!.BookingStatusId
-                     && b.CreatedAt < DateTime.UtcNow - maxAge)
+                     && b.CreatedAt < cutoff)
             .ToListAsync();
 
         foreach (var booking in bookings)

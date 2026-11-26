@@ -16,11 +16,11 @@ public class HoldExpiryWorker : BackgroundService
             using (var scope = _scopeFactory.CreateScope())
             {
                 var bookingService = scope.ServiceProvider.GetRequiredService<IBookingService>();
-                var count = await bookingService.ExpireHoldsAsync(TimeSpan.FromMinutes(1));
+                var count = await bookingService.ExpireHoldsAsync(TimeSpan.FromMinutes(10));
                 Console.WriteLine($"Expiry job: {count} hold(s) expired");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
         }
     }
 }
